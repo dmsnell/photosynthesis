@@ -1,18 +1,21 @@
 module Main exposing (..)
 
 import Dict exposing (Dict)
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, img, node, text)
+import Html.Attributes exposing (class, property, src)
 import HttpBuilder exposing (..)
 import Http exposing (expectJson)
 import Json.Decode as JD
+import Json.Encode as JE
+import Maybe.Extra exposing (isJust)
 import Navigation exposing (Location, program)
 import RemoteData exposing (RemoteData(..), WebData)
-import String.Extra exposing (replace)
 import UrlParser exposing (Parser, map, oneOf, parseHash, stringParam, top, (<?>))
 
 
 type Msg
     = ReceivePostIds Int (List Int) (Maybe String)
+    | ReceivePosts (List Post)
     | UrlChange Location
 
 
@@ -22,6 +25,7 @@ type alias Post =
     , content : String
     , createdAt : String
     , url : String
+    , imageUrl : Maybe String
     }
 
 
@@ -46,20 +50,22 @@ postList =
 
 type Route
     = NoSiteGiven
-    | Site String
+    | Site String Int
     | SiteNotFound
 
 
 type alias Model =
-    { postList : PostList
+    { perPage : Int
+    , postList : PostList
     , route : Route
     }
 
 
 model : Model
 model =
-    { postList = postList
-    , route = Site postList.site
+    { perPage = 20
+    , postList = postList
+    , route = Site postList.site 0
     }
 
 
@@ -81,7 +87,7 @@ init location =
 
         nextPostList =
             case route of
-                Site site ->
+                Site site _ ->
                     { postList | site = site }
 
                 _ ->
@@ -89,8 +95,11 @@ init location =
 
         startFetching =
             case route of
-                Site _ ->
-                    fetchPostIds nextPostList
+                Site _ _ ->
+                    [ fetchPostIds nextPostList
+                    , fetchPosts model.perPage nextPostList
+                    ]
+                        |> Cmd.batch
 
                 _ ->
                     Cmd.none
@@ -112,7 +121,7 @@ routeParser : Parser (Route -> a) a
 routeParser =
     let
         defaultSite =
-            Site postList.site
+            Site postList.site 0
 
         siteRoute s =
             s
@@ -121,7 +130,7 @@ routeParser =
                         if String.isEmpty s then
                             NoSiteGiven
                         else
-                            Site s
+                            Site s 0
                     )
                 |> Maybe.withDefault defaultSite
     in
@@ -133,7 +142,7 @@ routeParser =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case (Debug.log "Message" msg) of
+    case msg of
         ReceivePostIds total ids nextPage ->
             let
                 posts =
@@ -160,13 +169,24 @@ update msg model =
                         , nextPage = nextPage
                         , posts = Dict.union posts oldPostList.posts
                     }
-
-                fetchNextPage =
-                    nextPage
-                        |> Maybe.map (always <| fetchPostIds postList)
-                        |> Maybe.withDefault Cmd.none
             in
-                ( { model | postList = postList }, fetchNextPage )
+                ( { model | postList = postList }, Cmd.none )
+
+        ReceivePosts posts ->
+            let
+                oldPostList =
+                    model.postList
+
+                newPosts =
+                    posts
+                        |> List.map (\post -> ( post.id, Success post ))
+                        |> Dict.fromList
+                        |> (flip Dict.union) oldPostList.posts
+
+                newPostList =
+                    ({ oldPostList | posts = newPosts })
+            in
+                ( { model | postList = newPostList }, Cmd.none )
 
         UrlChange location ->
             ( { model | route = parseRoute location }, Cmd.none )
@@ -174,15 +194,135 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    case model.route of
-        NoSiteGiven ->
-            div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
+    let
+        body =
+            case model.route of
+                NoSiteGiven ->
+                    div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
 
-        Site site ->
-            div [] []
+                Site site page ->
+                    let
+                        es =
+                            Maybe.withDefault ""
 
-        SiteNotFound ->
-            div [] []
+                        posts =
+                            Dict.values model.postList.posts
+                                |> List.filter
+                                    (\post ->
+                                        case post of
+                                            Success { imageUrl } ->
+                                                isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
+
+                                            _ ->
+                                                True
+                                    )
+                                |> List.reverse
+                                |> List.take ((page + 1) * model.perPage)
+
+                        post remotePost =
+                            case remotePost of
+                                Success { id, title, content, imageUrl } ->
+                                    let
+                                        excerptClasses =
+                                            [ Just "excerpt"
+                                            , if
+                                                not (String.endsWith "[&hellip;]</p>\n" content)
+                                                    && not (String.endsWith "&hellip;</p>\n" content)
+                                              then
+                                                Just "short"
+                                              else
+                                                Nothing
+                                            , if String.length content < 80 then
+                                                Just "really-short"
+                                              else
+                                                Nothing
+                                            ]
+                                                |> List.filter isJust
+                                                |> List.map (Maybe.withDefault "")
+                                                |> List.intersperse " "
+                                                |> List.foldl (++) ""
+                                    in
+                                        div [ class "post" ]
+                                            [ img
+                                                [ class "primary"
+                                                , src <| es imageUrl
+                                                ]
+                                                []
+                                            , div
+                                                [ class "excerpt-container" ]
+                                                [ div
+                                                    [ class excerptClasses
+                                                    , rawHtml content
+                                                    ]
+                                                    []
+                                                ]
+                                            ]
+
+                                _ ->
+                                    div [] [ text "Loading…" ]
+                    in
+                        div []
+                            [ text "Posts"
+                            , posts
+                                |> List.map post
+                                |> div [ class "post-list" ]
+                            ]
+
+                SiteNotFound ->
+                    div [] []
+    in
+        div []
+            [ node "style"
+                [ property "textContent" <| JE.string style
+                , property "type" <| JE.string "text/css"
+                ]
+                []
+            , body
+            ]
+
+
+style : String
+style =
+    """
+body {
+    background-color: black;
+}
+
+.post-list img {
+    width: 100%;
+    height: auto;
+    max-height: 120vh;
+    object-fit: contain;
+}
+
+.post-list .post {
+
+}
+
+.post-list .post .excerpt-container {
+    margin-bottom: 128px;
+    margin-top: 128px;
+    padding-bottom: 24px;
+    padding-top: 24px;
+    background-color: white;
+}
+
+.post-list .post .excerpt {
+    width: 23em;
+    margin: auto;
+    line-height: 180%;
+    font-size: 108%;
+}
+
+.post-list .post .excerpt.short {
+    width: 40em;
+    text-align: center;
+}
+
+.post-list .post .excerpt.really-short {
+    width: 15em;
+}
+"""
 
 
 fetchPostIds : PostList -> Cmd Msg
@@ -190,9 +330,6 @@ fetchPostIds postList =
     let
         url =
             "https://public-api.wordpress.com/rest/v1.2/sites/" ++ postList.site ++ "/posts"
-
-        fixPageHandle =
-            replace "=" "%3d" >> replace "&" "%26"
 
         decoder =
             JD.map3
@@ -224,3 +361,54 @@ fetchPostIds postList =
             |> withQueryParams queryParams
             |> withExpect (Http.expectJson decoder)
             |> send toMsg
+
+
+fetchPosts : Int -> PostList -> Cmd Msg
+fetchPosts perPage postList =
+    let
+        url =
+            "https://public-api.wordpress.com/rest/v1.2/sites/" ++ postList.site ++ "/posts"
+
+        attributes =
+            JD.keyValuePairs (JD.field "URL" JD.string)
+                |> JD.map (List.head >> Maybe.map Tuple.second)
+
+        decoder =
+            JD.map
+                ReceivePosts
+                (JD.field "posts"
+                    (JD.list
+                        (JD.map6
+                            Post
+                            (JD.field "ID" JD.int)
+                            (JD.field "title" JD.string)
+                            (JD.field "excerpt" JD.string)
+                            (JD.field "date" JD.string)
+                            (JD.field "URL" JD.string)
+                            (JD.field "attachments" attributes)
+                        )
+                    )
+                )
+
+        toMsg result =
+            case result of
+                Ok msg ->
+                    msg
+
+                Err _ ->
+                    ReceivePosts []
+
+        queryParams =
+            [ ( "number", toString perPage )
+            , ( "fields", "ID,date,title,excerpt,URL,attachments" )
+            ]
+    in
+        get url
+            |> withQueryParams queryParams
+            |> withExpect (Http.expectJson decoder)
+            |> send toMsg
+
+
+rawHtml : String -> Html.Attribute Msg
+rawHtml =
+    property "innerHTML" << JE.string
