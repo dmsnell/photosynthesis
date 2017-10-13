@@ -1,36 +1,65 @@
 module Main exposing (..)
 
+import Dict exposing (Dict)
 import Html exposing (Html, div, text)
+import HttpBuilder exposing (..)
+import Http exposing (expectJson)
+import Json.Decode as JD
 import Navigation exposing (Location, program)
+import RemoteData exposing (RemoteData(..), WebData)
+import String.Extra exposing (replace)
 import UrlParser exposing (Parser, map, oneOf, parseHash, stringParam, top, (<?>))
 
 
 type Msg
-    = UrlChange Location
+    = ReceivePostIds Int (List Int) (Maybe String)
+    | UrlChange Location
 
 
-type LoadingStatus
-    = Idle
-    | Loading
+type alias Post =
+    { id : Int
+    , title : String
+    , content : String
+    , createdAt : String
+    , url : String
+    }
+
+
+type alias PostList =
+    { site : String
+    , totalPosts : Int
+    , perPage : Int
+    , nextPage : Maybe String
+    , posts : Dict Int (WebData Post)
+    }
+
+
+postList : PostList
+postList =
+    { site = "andrewspics.wordpress.com"
+    , totalPosts = 0
+    , perPage = 100
+    , nextPage = Nothing
+    , posts = Dict.empty
+    }
 
 
 type Route
-    = Boot
-    | NoSiteGiven
+    = NoSiteGiven
     | Site String
     | SiteNotFound
 
 
 type alias Model =
-    { networkStatus : LoadingStatus
+    { postList : PostList
     , route : Route
     }
 
 
 model : Model
 model =
-    { networkStatus = Idle
-    , route = Boot
+    { postList = postList
+    , route = Site postList.site
     }
 
 
@@ -46,7 +75,32 @@ main =
 
 init : Location -> ( Model, Cmd Msg )
 init location =
-    ( { model | route = parseRoute location }, Cmd.none )
+    let
+        route =
+            parseRoute location
+
+        nextPostList =
+            case route of
+                Site site ->
+                    { postList | site = site }
+
+                _ ->
+                    postList
+
+        startFetching =
+            case route of
+                Site _ ->
+                    fetchPostIds nextPostList
+
+                _ ->
+                    Cmd.none
+    in
+        ( { model
+            | postList = nextPostList
+            , route = route
+          }
+        , startFetching
+        )
 
 
 parseRoute : Location -> Route
@@ -57,6 +111,9 @@ parseRoute =
 routeParser : Parser (Route -> a) a
 routeParser =
     let
+        defaultSite =
+            Site postList.site
+
         siteRoute s =
             s
                 |> Maybe.map
@@ -66,17 +123,51 @@ routeParser =
                         else
                             Site s
                     )
-                |> Maybe.withDefault Boot
+                |> Maybe.withDefault defaultSite
     in
         oneOf
             [ map siteRoute (top <?> stringParam "site")
-            , map Boot top
+            , map defaultSite top
             ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case (Debug.log "Message" msg) of
+        ReceivePostIds total ids nextPage ->
+            let
+                posts =
+                    ids
+                        |> List.map (\id -> ( id, Loading ))
+                        |> Dict.fromList
+
+                oldPostList =
+                    model.postList
+
+                {-
+                   the API returns fewer and fewer results as we page
+                   so here we just want to keep the first result
+                -}
+                newTotal =
+                    if oldPostList.totalPosts == 0 then
+                        total
+                    else
+                        oldPostList.totalPosts
+
+                postList =
+                    { oldPostList
+                        | totalPosts = newTotal
+                        , nextPage = nextPage
+                        , posts = Dict.union posts oldPostList.posts
+                    }
+
+                fetchNextPage =
+                    nextPage
+                        |> Maybe.map (always <| fetchPostIds postList)
+                        |> Maybe.withDefault Cmd.none
+            in
+                ( { model | postList = postList }, fetchNextPage )
+
         UrlChange location ->
             ( { model | route = parseRoute location }, Cmd.none )
 
@@ -84,9 +175,6 @@ update msg model =
 view : Model -> Html Msg
 view model =
     case model.route of
-        Boot ->
-            div [] []
-
         NoSiteGiven ->
             div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
 
@@ -95,3 +183,44 @@ view model =
 
         SiteNotFound ->
             div [] []
+
+
+fetchPostIds : PostList -> Cmd Msg
+fetchPostIds postList =
+    let
+        url =
+            "https://public-api.wordpress.com/rest/v1.2/sites/" ++ postList.site ++ "/posts"
+
+        fixPageHandle =
+            replace "=" "%3d" >> replace "&" "%26"
+
+        decoder =
+            JD.map3
+                ReceivePostIds
+                (JD.field "found" JD.int)
+                (JD.field "posts" (JD.list (JD.field "ID" JD.int)))
+                (JD.at [ "meta", "next_page" ] JD.string |> JD.maybe)
+
+        toMsg result =
+            case result of
+                Ok msg ->
+                    msg
+
+                Err _ ->
+                    ReceivePostIds 0 [] Nothing
+
+        pageHandle =
+            postList.nextPage
+                |> Maybe.map (\handle -> [ ( "page_handle", handle ) ])
+                |> Maybe.withDefault []
+
+        queryParams =
+            [ ( "number", toString postList.perPage )
+            , ( "fields", "ID,date" )
+            ]
+                |> List.append pageHandle
+    in
+        get url
+            |> withQueryParams queryParams
+            |> withExpect (Http.expectJson decoder)
+            |> send toMsg
