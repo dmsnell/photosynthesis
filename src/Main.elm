@@ -195,6 +195,11 @@ update msg model =
 view : Model -> Html Msg
 view model =
     let
+        joinClasses =
+            List.filter (Tuple.second >> ((==) True))
+                >> List.map Tuple.first
+                >> String.join " "
+
         body =
             case model.route of
                 NoSiteGiven ->
@@ -223,24 +228,26 @@ view model =
                             case remotePost of
                                 Success { id, title, content, imageUrl } ->
                                     let
+                                        excerptContainerClasses =
+                                            joinClasses
+                                                [ ( "excerpt-container", True )
+                                                , ( "empty", String.isEmpty content )
+                                                ]
+
                                         excerptClasses =
-                                            [ Just "excerpt"
-                                            , if
-                                                not (String.endsWith "[&hellip;]</p>\n" content)
-                                                    && not (String.endsWith "&hellip;</p>\n" content)
-                                              then
-                                                Just "short"
-                                              else
-                                                Nothing
-                                            , if String.length content < 80 then
-                                                Just "really-short"
-                                              else
-                                                Nothing
-                                            ]
-                                                |> List.filter isJust
-                                                |> List.map (Maybe.withDefault "")
-                                                |> List.intersperse " "
-                                                |> List.foldl (++) ""
+                                            joinClasses
+                                                [ ( "excerpt", True )
+                                                , ( "short"
+                                                  , (False
+                                                        || String.endsWith "[&hellip;]</p>\n" content
+                                                        || String.endsWith "&hellip;</p>\n" content
+                                                    )
+                                                        |> not
+                                                  )
+                                                , ( "single-line"
+                                                  , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
+                                                  )
+                                                ]
                                     in
                                         div [ class "post" ]
                                             [ img
@@ -249,7 +256,7 @@ view model =
                                                 ]
                                                 []
                                             , div
-                                                [ class "excerpt-container" ]
+                                                [ class excerptContainerClasses ]
                                                 [ div
                                                     [ class excerptClasses
                                                     , rawHtml content
@@ -307,6 +314,11 @@ body {
     background-color: white;
 }
 
+.post-list .post .excerpt-container.empty {
+    min-height: 30vh;
+    background-color: #111;
+}
+
 .post-list .post .excerpt {
     width: 23em;
     margin: auto;
@@ -319,7 +331,7 @@ body {
     text-align: center;
 }
 
-.post-list .post .excerpt.really-short {
+.post-list .post .excerpt.single-line {
     width: 15em;
 }
 """
