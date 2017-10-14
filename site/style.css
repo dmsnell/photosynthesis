@@ -1,0 +1,51 @@
+html,
+head,
+body { 
+    padding :0; 
+    margin: 0; 
+}
+
+body { 
+    font-family: calibri, helvetica, arial, sans-serif; 
+    background-color: black;
+}
+
+.post-list img {
+    width: 100%;
+    height: auto;
+    max-height: 120vh;
+    object-fit: contain;
+}
+
+.post-list .post {
+
+}
+
+.post-list .post .excerpt-container {
+    margin-bottom: 128px;
+    margin-top: 128px;
+    padding-bottom: 24px;
+    padding-top: 24px;
+    background-color: white;
+}
+
+.post-list .post .excerpt-container.empty {
+    min-height: 30vh;
+    background-color: #111;
+}
+
+.post-list .post .excerpt {
+    width: 23em;
+    margin: auto;
+    line-height: 180%;
+    font-size: 108%;
+}
+
+.post-list .post .excerpt.short {
+    width: 40em;
+    text-align: center;
+}
+
+.post-list .post .excerpt.single-line {
+    width: 15em;
+}

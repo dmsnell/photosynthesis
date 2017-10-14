@@ -163,132 +163,73 @@ view model =
             List.filter (Tuple.second >> ((==) True))
                 >> List.map Tuple.first
                 >> String.join " "
+    in
+        case model.route of
+            NoSiteGiven ->
+                div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
 
-        body =
-            case model.route of
-                NoSiteGiven ->
-                    div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
+            Site site page ->
+                let
+                    es =
+                        Maybe.withDefault ""
 
-                Site site page ->
-                    let
-                        es =
-                            Maybe.withDefault ""
+                    posts =
+                        Dict.values model.postList.posts
+                            |> List.filter
+                                (\{ imageUrl } ->
+                                    isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
+                                )
+                            |> List.reverse
+                            |> List.take ((page + 1) * model.postList.perPage)
 
-                        posts =
-                            Dict.values model.postList.posts
-                                |> List.filter
-                                    (\{ imageUrl } ->
-                                        isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
-                                    )
-                                |> List.reverse
-                                |> List.take ((page + 1) * model.postList.perPage)
+                    post { id, title, content, imageUrl } =
+                        let
+                            excerptContainerClasses =
+                                joinClasses
+                                    [ ( "excerpt-container", True )
+                                    , ( "empty", String.isEmpty content )
+                                    ]
 
-                        post { id, title, content, imageUrl } =
-                            let
-                                excerptContainerClasses =
-                                    joinClasses
-                                        [ ( "excerpt-container", True )
-                                        , ( "empty", String.isEmpty content )
-                                        ]
-
-                                excerptClasses =
-                                    joinClasses
-                                        [ ( "excerpt", True )
-                                        , ( "short"
-                                          , (False
-                                                || String.endsWith "[&hellip;]</p>\n" content
-                                                || String.endsWith "&hellip;</p>\n" content
-                                            )
-                                                |> not
-                                          )
-                                        , ( "single-line"
-                                          , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
-                                          )
-                                        ]
-                            in
-                                div [ class "post" ]
-                                    [ img
-                                        [ class "primary"
-                                        , src <| es imageUrl
+                            excerptClasses =
+                                joinClasses
+                                    [ ( "excerpt", True )
+                                    , ( "short"
+                                      , (False
+                                            || String.endsWith "[&hellip;]</p>\n" content
+                                            || String.endsWith "&hellip;</p>\n" content
+                                        )
+                                            |> not
+                                      )
+                                    , ( "single-line"
+                                      , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
+                                      )
+                                    ]
+                        in
+                            div [ class "post" ]
+                                [ img
+                                    [ class "primary"
+                                    , src <| es imageUrl
+                                    ]
+                                    []
+                                , div
+                                    [ class excerptContainerClasses ]
+                                    [ div
+                                        [ class excerptClasses
+                                        , rawHtml content
                                         ]
                                         []
-                                    , div
-                                        [ class excerptContainerClasses ]
-                                        [ div
-                                            [ class excerptClasses
-                                            , rawHtml content
-                                            ]
-                                            []
-                                        ]
                                     ]
-                    in
-                        div []
-                            [ text "Posts"
-                            , posts
-                                |> List.map post
-                                |> div [ class "post-list" ]
-                            ]
+                                ]
+                in
+                    div []
+                        [ text "Posts"
+                        , posts
+                            |> List.map post
+                            |> div [ class "post-list" ]
+                        ]
 
-                SiteNotFound ->
-                    div [] []
-    in
-        div []
-            [ node "style"
-                [ property "textContent" <| JE.string style
-                , property "type" <| JE.string "text/css"
-                ]
-                []
-            , body
-            ]
-
-
-style : String
-style =
-    """
-body {
-    background-color: black;
-}
-
-.post-list img {
-    width: 100%;
-    height: auto;
-    max-height: 120vh;
-    object-fit: contain;
-}
-
-.post-list .post {
-
-}
-
-.post-list .post .excerpt-container {
-    margin-bottom: 128px;
-    margin-top: 128px;
-    padding-bottom: 24px;
-    padding-top: 24px;
-    background-color: white;
-}
-
-.post-list .post .excerpt-container.empty {
-    min-height: 30vh;
-    background-color: #111;
-}
-
-.post-list .post .excerpt {
-    width: 23em;
-    margin: auto;
-    line-height: 180%;
-    font-size: 108%;
-}
-
-.post-list .post .excerpt.short {
-    width: 40em;
-    text-align: center;
-}
-
-.post-list .post .excerpt.single-line {
-    width: 15em;
-}
-"""
+            SiteNotFound ->
+                div [] []
 
 
 fetchPosts : PostList -> Cmd Msg
