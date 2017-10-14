@@ -9848,214 +9848,6 @@ var _elm_lang$navigation$Navigation$onEffects = F4(
 			stepState);
 	});
 _elm_lang$core$Native_Platform.effectManagers['Navigation'] = {pkg: 'elm-lang/navigation', init: _elm_lang$navigation$Navigation$init, onEffects: _elm_lang$navigation$Navigation$onEffects, onSelfMsg: _elm_lang$navigation$Navigation$onSelfMsg, tag: 'fx', cmdMap: _elm_lang$navigation$Navigation$cmdMap, subMap: _elm_lang$navigation$Navigation$subMap};
-var _krisajenkins$remotedata$RemoteData$isNotAsked = function (data) {
-	var _p0 = data;
-	if (_p0.ctor === 'NotAsked') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var _krisajenkins$remotedata$RemoteData$isLoading = function (data) {
-	var _p1 = data;
-	if (_p1.ctor === 'Loading') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var _krisajenkins$remotedata$RemoteData$isFailure = function (data) {
-	var _p2 = data;
-	if (_p2.ctor === 'Failure') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var _krisajenkins$remotedata$RemoteData$isSuccess = function (data) {
-	var _p3 = data;
-	if (_p3.ctor === 'Success') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var _krisajenkins$remotedata$RemoteData$withDefault = F2(
-	function ($default, data) {
-		var _p4 = data;
-		if (_p4.ctor === 'Success') {
-			return _p4._0;
-		} else {
-			return $default;
-		}
-	});
-var _krisajenkins$remotedata$RemoteData$Success = function (a) {
-	return {ctor: 'Success', _0: a};
-};
-var _krisajenkins$remotedata$RemoteData$succeed = _krisajenkins$remotedata$RemoteData$Success;
-var _krisajenkins$remotedata$RemoteData$prism = {
-	reverseGet: _krisajenkins$remotedata$RemoteData$Success,
-	getOption: function (data) {
-		var _p5 = data;
-		if (_p5.ctor === 'Success') {
-			return _elm_lang$core$Maybe$Just(_p5._0);
-		} else {
-			return _elm_lang$core$Maybe$Nothing;
-		}
-	}
-};
-var _krisajenkins$remotedata$RemoteData$Failure = function (a) {
-	return {ctor: 'Failure', _0: a};
-};
-var _krisajenkins$remotedata$RemoteData$fromResult = function (result) {
-	var _p6 = result;
-	if (_p6.ctor === 'Err') {
-		return _krisajenkins$remotedata$RemoteData$Failure(_p6._0);
-	} else {
-		return _krisajenkins$remotedata$RemoteData$Success(_p6._0);
-	}
-};
-var _krisajenkins$remotedata$RemoteData$asCmd = _elm_lang$core$Task$attempt(_krisajenkins$remotedata$RemoteData$fromResult);
-var _krisajenkins$remotedata$RemoteData$sendRequest = _elm_lang$http$Http$send(_krisajenkins$remotedata$RemoteData$fromResult);
-var _krisajenkins$remotedata$RemoteData$fromTask = function (_p7) {
-	return A2(
-		_elm_lang$core$Task$onError,
-		function (_p8) {
-			return _elm_lang$core$Task$succeed(
-				_krisajenkins$remotedata$RemoteData$Failure(_p8));
-		},
-		A2(_elm_lang$core$Task$map, _krisajenkins$remotedata$RemoteData$Success, _p7));
-};
-var _krisajenkins$remotedata$RemoteData$Loading = {ctor: 'Loading'};
-var _krisajenkins$remotedata$RemoteData$NotAsked = {ctor: 'NotAsked'};
-var _krisajenkins$remotedata$RemoteData$map = F2(
-	function (f, data) {
-		var _p9 = data;
-		switch (_p9.ctor) {
-			case 'Success':
-				return _krisajenkins$remotedata$RemoteData$Success(
-					f(_p9._0));
-			case 'Loading':
-				return _krisajenkins$remotedata$RemoteData$Loading;
-			case 'NotAsked':
-				return _krisajenkins$remotedata$RemoteData$NotAsked;
-			default:
-				return _krisajenkins$remotedata$RemoteData$Failure(_p9._0);
-		}
-	});
-var _krisajenkins$remotedata$RemoteData$toMaybe = function (_p10) {
-	return A2(
-		_krisajenkins$remotedata$RemoteData$withDefault,
-		_elm_lang$core$Maybe$Nothing,
-		A2(_krisajenkins$remotedata$RemoteData$map, _elm_lang$core$Maybe$Just, _p10));
-};
-var _krisajenkins$remotedata$RemoteData$mapError = F2(
-	function (f, data) {
-		var _p11 = data;
-		switch (_p11.ctor) {
-			case 'Success':
-				return _krisajenkins$remotedata$RemoteData$Success(_p11._0);
-			case 'Failure':
-				return _krisajenkins$remotedata$RemoteData$Failure(
-					f(_p11._0));
-			case 'Loading':
-				return _krisajenkins$remotedata$RemoteData$Loading;
-			default:
-				return _krisajenkins$remotedata$RemoteData$NotAsked;
-		}
-	});
-var _krisajenkins$remotedata$RemoteData$mapBoth = F2(
-	function (successFn, errorFn) {
-		return function (_p12) {
-			return A2(
-				_krisajenkins$remotedata$RemoteData$mapError,
-				errorFn,
-				A2(_krisajenkins$remotedata$RemoteData$map, successFn, _p12));
-		};
-	});
-var _krisajenkins$remotedata$RemoteData$andThen = F2(
-	function (f, data) {
-		var _p13 = data;
-		switch (_p13.ctor) {
-			case 'Success':
-				return f(_p13._0);
-			case 'Failure':
-				return _krisajenkins$remotedata$RemoteData$Failure(_p13._0);
-			case 'NotAsked':
-				return _krisajenkins$remotedata$RemoteData$NotAsked;
-			default:
-				return _krisajenkins$remotedata$RemoteData$Loading;
-		}
-	});
-var _krisajenkins$remotedata$RemoteData$andMap = F2(
-	function (wrappedValue, wrappedFunction) {
-		var _p14 = wrappedFunction;
-		switch (_p14.ctor) {
-			case 'Success':
-				return A2(_krisajenkins$remotedata$RemoteData$map, _p14._0, wrappedValue);
-			case 'Failure':
-				return _krisajenkins$remotedata$RemoteData$Failure(_p14._0);
-			case 'Loading':
-				return _krisajenkins$remotedata$RemoteData$Loading;
-			default:
-				return _krisajenkins$remotedata$RemoteData$NotAsked;
-		}
-	});
-var _krisajenkins$remotedata$RemoteData$map2 = F3(
-	function (f, a, b) {
-		return A2(
-			_krisajenkins$remotedata$RemoteData$andMap,
-			b,
-			A2(_krisajenkins$remotedata$RemoteData$map, f, a));
-	});
-var _krisajenkins$remotedata$RemoteData$map3 = F4(
-	function (f, a, b, c) {
-		return A2(
-			_krisajenkins$remotedata$RemoteData$andMap,
-			c,
-			A2(
-				_krisajenkins$remotedata$RemoteData$andMap,
-				b,
-				A2(_krisajenkins$remotedata$RemoteData$map, f, a)));
-	});
-var _krisajenkins$remotedata$RemoteData$append = F2(
-	function (a, b) {
-		return A2(
-			_krisajenkins$remotedata$RemoteData$andMap,
-			b,
-			A2(
-				_krisajenkins$remotedata$RemoteData$map,
-				F2(
-					function (v0, v1) {
-						return {ctor: '_Tuple2', _0: v0, _1: v1};
-					}),
-				a));
-	});
-var _krisajenkins$remotedata$RemoteData$update = F2(
-	function (f, remoteData) {
-		var _p15 = remoteData;
-		switch (_p15.ctor) {
-			case 'Success':
-				var _p16 = f(_p15._0);
-				var first = _p16._0;
-				var second = _p16._1;
-				return {
-					ctor: '_Tuple2',
-					_0: _krisajenkins$remotedata$RemoteData$Success(first),
-					_1: second
-				};
-			case 'NotAsked':
-				return {ctor: '_Tuple2', _0: _krisajenkins$remotedata$RemoteData$NotAsked, _1: _elm_lang$core$Platform_Cmd$none};
-			case 'Loading':
-				return {ctor: '_Tuple2', _0: _krisajenkins$remotedata$RemoteData$Loading, _1: _elm_lang$core$Platform_Cmd$none};
-			default:
-				return {
-					ctor: '_Tuple2',
-					_0: _krisajenkins$remotedata$RemoteData$Failure(_p15._0),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-		}
-	});
 var _evancz$url_parser$UrlParser$toKeyValuePair = function (segment) {
 	var _p0 = A2(_elm_lang$core$String$split, '=', segment);
 	if (((_p0.ctor === '::') && (_p0._1.ctor === '::')) && (_p0._1._1.ctor === '[]')) {
@@ -10350,127 +10142,112 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 				var es = _elm_lang$core$Maybe$withDefault('');
 				var posts = A2(
 					_elm_lang$core$List$take,
-					(_p3._1 + 1) * model.perPage,
+					(_p3._1 + 1) * model.postList.perPage,
 					_elm_lang$core$List$reverse(
 						A2(
 							_elm_lang$core$List$filter,
-							function (post) {
-								var _p4 = post;
-								if (_p4.ctor === 'Success') {
-									var _p5 = _p4._0.imageUrl;
-									return _elm_community$maybe_extra$Maybe_Extra$isJust(_p5) && (!A2(
-										_elm_lang$core$String$endsWith,
-										'.mov',
-										es(_p5)));
-								} else {
-									return true;
-								}
+							function (_p4) {
+								var _p5 = _p4;
+								var _p6 = _p5.imageUrl;
+								return _elm_community$maybe_extra$Maybe_Extra$isJust(_p6) && (!A2(
+									_elm_lang$core$String$endsWith,
+									'.mov',
+									es(_p6)));
 							},
 							_elm_lang$core$Dict$values(model.postList.posts))));
-				var post = function (remotePost) {
-					var _p6 = remotePost;
-					if (_p6.ctor === 'Success') {
-						var _p7 = _p6._0.content;
-						var excerptClasses = joinClasses(
-							{
+				var post = function (_p7) {
+					var _p8 = _p7;
+					var _p9 = _p8.content;
+					var excerptClasses = joinClasses(
+						{
+							ctor: '::',
+							_0: {ctor: '_Tuple2', _0: 'excerpt', _1: true},
+							_1: {
 								ctor: '::',
-								_0: {ctor: '_Tuple2', _0: 'excerpt', _1: true},
+								_0: {
+									ctor: '_Tuple2',
+									_0: 'short',
+									_1: !(false || (A2(_elm_lang$core$String$endsWith, '[&hellip;]</p>\n', _p9) || A2(_elm_lang$core$String$endsWith, '&hellip;</p>\n', _p9)))
+								},
 								_1: {
 									ctor: '::',
 									_0: {
 										ctor: '_Tuple2',
-										_0: 'short',
-										_1: !(false || (A2(_elm_lang$core$String$endsWith, '[&hellip;]</p>\n', _p7) || A2(_elm_lang$core$String$endsWith, '&hellip;</p>\n', _p7)))
+										_0: 'single-line',
+										_1: (_elm_lang$core$Native_Utils.cmp(
+											_elm_lang$core$String$length(_p9),
+											80) > 0) && ((_elm_lang$core$Native_Utils.cmp(
+											_elm_lang$core$String$length(_p9),
+											160) < 0) && (!A2(_elm_lang$core$String$contains, '<br', _p9)))
 									},
+									_1: {ctor: '[]'}
+								}
+							}
+						});
+					var excerptContainerClasses = joinClasses(
+						{
+							ctor: '::',
+							_0: {ctor: '_Tuple2', _0: 'excerpt-container', _1: true},
+							_1: {
+								ctor: '::',
+								_0: {
+									ctor: '_Tuple2',
+									_0: 'empty',
+									_1: _elm_lang$core$String$isEmpty(_p9)
+								},
+								_1: {ctor: '[]'}
+							}
+						});
+					return A2(
+						_elm_lang$html$Html$div,
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$class('post'),
+							_1: {ctor: '[]'}
+						},
+						{
+							ctor: '::',
+							_0: A2(
+								_elm_lang$html$Html$img,
+								{
+									ctor: '::',
+									_0: _elm_lang$html$Html_Attributes$class('primary'),
 									_1: {
 										ctor: '::',
-										_0: {
-											ctor: '_Tuple2',
-											_0: 'single-line',
-											_1: (_elm_lang$core$Native_Utils.cmp(
-												_elm_lang$core$String$length(_p7),
-												80) > 0) && ((_elm_lang$core$Native_Utils.cmp(
-												_elm_lang$core$String$length(_p7),
-												160) < 0) && (!A2(_elm_lang$core$String$contains, '<br', _p7)))
-										},
+										_0: _elm_lang$html$Html_Attributes$src(
+											es(_p8.imageUrl)),
 										_1: {ctor: '[]'}
 									}
-								}
-							});
-						var excerptContainerClasses = joinClasses(
-							{
-								ctor: '::',
-								_0: {ctor: '_Tuple2', _0: 'excerpt-container', _1: true},
-								_1: {
-									ctor: '::',
-									_0: {
-										ctor: '_Tuple2',
-										_0: 'empty',
-										_1: _elm_lang$core$String$isEmpty(_p7)
-									},
-									_1: {ctor: '[]'}
-								}
-							});
-						return A2(
-							_elm_lang$html$Html$div,
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html_Attributes$class('post'),
-								_1: {ctor: '[]'}
-							},
-							{
+								},
+								{ctor: '[]'}),
+							_1: {
 								ctor: '::',
 								_0: A2(
-									_elm_lang$html$Html$img,
+									_elm_lang$html$Html$div,
 									{
 										ctor: '::',
-										_0: _elm_lang$html$Html_Attributes$class('primary'),
-										_1: {
-											ctor: '::',
-											_0: _elm_lang$html$Html_Attributes$src(
-												es(_p6._0.imageUrl)),
-											_1: {ctor: '[]'}
-										}
+										_0: _elm_lang$html$Html_Attributes$class(excerptContainerClasses),
+										_1: {ctor: '[]'}
 									},
-									{ctor: '[]'}),
-								_1: {
-									ctor: '::',
-									_0: A2(
-										_elm_lang$html$Html$div,
-										{
-											ctor: '::',
-											_0: _elm_lang$html$Html_Attributes$class(excerptContainerClasses),
-											_1: {ctor: '[]'}
-										},
-										{
-											ctor: '::',
-											_0: A2(
-												_elm_lang$html$Html$div,
-												{
+									{
+										ctor: '::',
+										_0: A2(
+											_elm_lang$html$Html$div,
+											{
+												ctor: '::',
+												_0: _elm_lang$html$Html_Attributes$class(excerptClasses),
+												_1: {
 													ctor: '::',
-													_0: _elm_lang$html$Html_Attributes$class(excerptClasses),
-													_1: {
-														ctor: '::',
-														_0: _dmsnell$photosynthesis$Main$rawHtml(_p7),
-														_1: {ctor: '[]'}
-													}
-												},
-												{ctor: '[]'}),
-											_1: {ctor: '[]'}
-										}),
-									_1: {ctor: '[]'}
-								}
-							});
-					} else {
-						return A2(
-							_elm_lang$html$Html$div,
-							{ctor: '[]'},
-							{
-								ctor: '::',
-								_0: _elm_lang$html$Html$text('Loading…'),
+													_0: _dmsnell$photosynthesis$Main$rawHtml(_p9),
+													_1: {ctor: '[]'}
+												}
+											},
+											{ctor: '[]'}),
+										_1: {ctor: '[]'}
+									}),
 								_1: {ctor: '[]'}
-							});
-					}
+							}
+						});
 				};
 				return A2(
 					_elm_lang$html$Html$div,
@@ -10529,7 +10306,7 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 			}
 		});
 };
-var _dmsnell$photosynthesis$Main$postList = {site: 'andrewspics.wordpress.com', totalPosts: 0, perPage: 100, nextPage: _elm_lang$core$Maybe$Nothing, posts: _elm_lang$core$Dict$empty};
+var _dmsnell$photosynthesis$Main$postList = {site: 'andrewspics.wordpress.com', totalPosts: 0, perPage: 20, nextPage: _elm_lang$core$Maybe$Nothing, posts: _elm_lang$core$Dict$empty};
 var _dmsnell$photosynthesis$Main$Post = F6(
 	function (a, b, c, d, e, f) {
 		return {id: a, title: b, content: c, createdAt: d, url: e, imageUrl: f};
@@ -10538,9 +10315,9 @@ var _dmsnell$photosynthesis$Main$PostList = F5(
 	function (a, b, c, d, e) {
 		return {site: a, totalPosts: b, perPage: c, nextPage: d, posts: e};
 	});
-var _dmsnell$photosynthesis$Main$Model = F3(
-	function (a, b, c) {
-		return {perPage: a, postList: b, route: c};
+var _dmsnell$photosynthesis$Main$Model = F2(
+	function (a, b) {
+		return {postList: a, route: b};
 	});
 var _dmsnell$photosynthesis$Main$UrlChange = function (a) {
 	return {ctor: 'UrlChange', _0: a};
@@ -10548,139 +10325,55 @@ var _dmsnell$photosynthesis$Main$UrlChange = function (a) {
 var _dmsnell$photosynthesis$Main$ReceivePosts = function (a) {
 	return {ctor: 'ReceivePosts', _0: a};
 };
-var _dmsnell$photosynthesis$Main$fetchPosts = F2(
-	function (perPage, postList) {
-		var queryParams = {
+var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
+	var queryParams = {
+		ctor: '::',
+		_0: {
+			ctor: '_Tuple2',
+			_0: 'number',
+			_1: _elm_lang$core$Basics$toString(postList.perPage)
+		},
+		_1: {
 			ctor: '::',
-			_0: {
-				ctor: '_Tuple2',
-				_0: 'number',
-				_1: _elm_lang$core$Basics$toString(perPage)
-			},
-			_1: {
-				ctor: '::',
-				_0: {ctor: '_Tuple2', _0: 'fields', _1: 'ID,date,title,excerpt,URL,attachments'},
-				_1: {ctor: '[]'}
-			}
-		};
-		var toMsg = function (result) {
-			var _p8 = result;
-			if (_p8.ctor === 'Ok') {
-				return _p8._0;
-			} else {
-				return _dmsnell$photosynthesis$Main$ReceivePosts(
-					{ctor: '[]'});
-			}
-		};
-		var attributes = A2(
-			_elm_lang$core$Json_Decode$map,
-			function (_p9) {
-				return A2(
-					_elm_lang$core$Maybe$map,
-					_elm_lang$core$Tuple$second,
-					_elm_lang$core$List$head(_p9));
-			},
-			_elm_lang$core$Json_Decode$keyValuePairs(
-				A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string)));
-		var decoder = A2(
-			_elm_lang$core$Json_Decode$map,
-			_dmsnell$photosynthesis$Main$ReceivePosts,
-			A2(
-				_elm_lang$core$Json_Decode$field,
-				'posts',
-				_elm_lang$core$Json_Decode$list(
-					A7(
-						_elm_lang$core$Json_Decode$map6,
-						_dmsnell$photosynthesis$Main$Post,
-						A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int),
-						A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
-						A2(_elm_lang$core$Json_Decode$field, 'excerpt', _elm_lang$core$Json_Decode$string),
-						A2(_elm_lang$core$Json_Decode$field, 'date', _elm_lang$core$Json_Decode$string),
-						A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string),
-						A2(_elm_lang$core$Json_Decode$field, 'attachments', attributes)))));
-		var url = A2(
-			_elm_lang$core$Basics_ops['++'],
-			'https://public-api.wordpress.com/rest/v1.2/sites/',
-			A2(_elm_lang$core$Basics_ops['++'], postList.site, '/posts'));
-		return A2(
-			_lukewestby$elm_http_builder$HttpBuilder$send,
-			toMsg,
-			A2(
-				_lukewestby$elm_http_builder$HttpBuilder$withExpect,
-				_elm_lang$http$Http$expectJson(decoder),
-				A2(
-					_lukewestby$elm_http_builder$HttpBuilder$withQueryParams,
-					queryParams,
-					_lukewestby$elm_http_builder$HttpBuilder$get(url))));
-	});
-var _dmsnell$photosynthesis$Main$ReceivePostIds = F3(
-	function (a, b, c) {
-		return {ctor: 'ReceivePostIds', _0: a, _1: b, _2: c};
-	});
-var _dmsnell$photosynthesis$Main$fetchPostIds = function (postList) {
-	var pageHandle = A2(
-		_elm_lang$core$Maybe$withDefault,
-		{ctor: '[]'},
-		A2(
-			_elm_lang$core$Maybe$map,
-			function (handle) {
-				return {
-					ctor: '::',
-					_0: {ctor: '_Tuple2', _0: 'page_handle', _1: handle},
-					_1: {ctor: '[]'}
-				};
-			},
-			postList.nextPage));
-	var queryParams = A2(
-		_elm_lang$core$List$append,
-		pageHandle,
-		{
-			ctor: '::',
-			_0: {
-				ctor: '_Tuple2',
-				_0: 'number',
-				_1: _elm_lang$core$Basics$toString(postList.perPage)
-			},
-			_1: {
-				ctor: '::',
-				_0: {ctor: '_Tuple2', _0: 'fields', _1: 'ID,date'},
-				_1: {ctor: '[]'}
-			}
-		});
+			_0: {ctor: '_Tuple2', _0: 'fields', _1: 'ID,date,title,excerpt,URL,attachments'},
+			_1: {ctor: '[]'}
+		}
+	};
 	var toMsg = function (result) {
 		var _p10 = result;
 		if (_p10.ctor === 'Ok') {
 			return _p10._0;
 		} else {
-			return A3(
-				_dmsnell$photosynthesis$Main$ReceivePostIds,
-				0,
-				{ctor: '[]'},
-				_elm_lang$core$Maybe$Nothing);
+			return _dmsnell$photosynthesis$Main$ReceivePosts(
+				{ctor: '[]'});
 		}
 	};
-	var decoder = A4(
-		_elm_lang$core$Json_Decode$map3,
-		_dmsnell$photosynthesis$Main$ReceivePostIds,
-		A2(_elm_lang$core$Json_Decode$field, 'found', _elm_lang$core$Json_Decode$int),
+	var attributes = A2(
+		_elm_lang$core$Json_Decode$map,
+		function (_p11) {
+			return A2(
+				_elm_lang$core$Maybe$map,
+				_elm_lang$core$Tuple$second,
+				_elm_lang$core$List$head(_p11));
+		},
+		_elm_lang$core$Json_Decode$keyValuePairs(
+			A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string)));
+	var decoder = A2(
+		_elm_lang$core$Json_Decode$map,
+		_dmsnell$photosynthesis$Main$ReceivePosts,
 		A2(
 			_elm_lang$core$Json_Decode$field,
 			'posts',
 			_elm_lang$core$Json_Decode$list(
-				A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int))),
-		_elm_lang$core$Json_Decode$maybe(
-			A2(
-				_elm_lang$core$Json_Decode$at,
-				{
-					ctor: '::',
-					_0: 'meta',
-					_1: {
-						ctor: '::',
-						_0: 'next_page',
-						_1: {ctor: '[]'}
-					}
-				},
-				_elm_lang$core$Json_Decode$string)));
+				A7(
+					_elm_lang$core$Json_Decode$map6,
+					_dmsnell$photosynthesis$Main$Post,
+					A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int),
+					A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
+					A2(_elm_lang$core$Json_Decode$field, 'excerpt', _elm_lang$core$Json_Decode$string),
+					A2(_elm_lang$core$Json_Decode$field, 'date', _elm_lang$core$Json_Decode$string),
+					A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string),
+					A2(_elm_lang$core$Json_Decode$field, 'attachments', attributes)))));
 	var url = A2(
 		_elm_lang$core$Basics_ops['++'],
 		'https://public-api.wordpress.com/rest/v1.2/sites/',
@@ -10702,7 +10395,6 @@ var _dmsnell$photosynthesis$Main$Site = F2(
 		return {ctor: 'Site', _0: a, _1: b};
 	});
 var _dmsnell$photosynthesis$Main$model = {
-	perPage: 20,
 	postList: _dmsnell$photosynthesis$Main$postList,
 	route: A2(_dmsnell$photosynthesis$Main$Site, _dmsnell$photosynthesis$Main$postList.site, 0)
 };
@@ -10737,37 +10429,28 @@ var _dmsnell$photosynthesis$Main$routeParser = function () {
 			}
 		});
 }();
-var _dmsnell$photosynthesis$Main$parseRoute = function (_p11) {
+var _dmsnell$photosynthesis$Main$parseRoute = function (_p12) {
 	return A2(
 		_elm_lang$core$Maybe$withDefault,
 		_dmsnell$photosynthesis$Main$SiteNotFound,
-		A2(_evancz$url_parser$UrlParser$parseHash, _dmsnell$photosynthesis$Main$routeParser, _p11));
+		A2(_evancz$url_parser$UrlParser$parseHash, _dmsnell$photosynthesis$Main$routeParser, _p12));
 };
 var _dmsnell$photosynthesis$Main$init = function (location) {
 	var route = _dmsnell$photosynthesis$Main$parseRoute(location);
 	var nextPostList = function () {
-		var _p12 = route;
-		if (_p12.ctor === 'Site') {
+		var _p13 = route;
+		if (_p13.ctor === 'Site') {
 			return _elm_lang$core$Native_Utils.update(
 				_dmsnell$photosynthesis$Main$postList,
-				{site: _p12._0});
+				{site: _p13._0});
 		} else {
 			return _dmsnell$photosynthesis$Main$postList;
 		}
 	}();
 	var startFetching = function () {
-		var _p13 = route;
-		if (_p13.ctor === 'Site') {
-			return _elm_lang$core$Platform_Cmd$batch(
-				{
-					ctor: '::',
-					_0: _dmsnell$photosynthesis$Main$fetchPostIds(nextPostList),
-					_1: {
-						ctor: '::',
-						_0: A2(_dmsnell$photosynthesis$Main$fetchPosts, _dmsnell$photosynthesis$Main$model.perPage, nextPostList),
-						_1: {ctor: '[]'}
-					}
-				});
+		var _p14 = route;
+		if (_p14.ctor === 'Site') {
+			return _dmsnell$photosynthesis$Main$fetchPosts(nextPostList);
 		} else {
 			return _elm_lang$core$Platform_Cmd$none;
 		}
@@ -10782,69 +10465,40 @@ var _dmsnell$photosynthesis$Main$init = function (location) {
 };
 var _dmsnell$photosynthesis$Main$update = F2(
 	function (msg, model) {
-		var _p14 = msg;
-		switch (_p14.ctor) {
-			case 'ReceivePostIds':
-				var oldPostList = model.postList;
-				var newTotal = _elm_lang$core$Native_Utils.eq(oldPostList.totalPosts, 0) ? _p14._0 : oldPostList.totalPosts;
-				var posts = _elm_lang$core$Dict$fromList(
+		var _p15 = msg;
+		if (_p15.ctor === 'ReceivePosts') {
+			var oldPostList = model.postList;
+			var newPosts = A3(
+				_elm_lang$core$Basics$flip,
+				_elm_lang$core$Dict$union,
+				oldPostList.posts,
+				_elm_lang$core$Dict$fromList(
 					A2(
 						_elm_lang$core$List$map,
-						function (id) {
-							return {ctor: '_Tuple2', _0: id, _1: _krisajenkins$remotedata$RemoteData$Loading};
+						function (post) {
+							return {ctor: '_Tuple2', _0: post.id, _1: post};
 						},
-						_p14._1));
-				var postList = _elm_lang$core$Native_Utils.update(
-					oldPostList,
+						_p15._0)));
+			var newPostList = _elm_lang$core$Native_Utils.update(
+				oldPostList,
+				{posts: newPosts});
+			return {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
+					{postList: newPostList}),
+				_1: _elm_lang$core$Platform_Cmd$none
+			};
+		} else {
+			return {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
 					{
-						totalPosts: newTotal,
-						nextPage: _p14._2,
-						posts: A2(_elm_lang$core$Dict$union, posts, oldPostList.posts)
-					});
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{postList: postList}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'ReceivePosts':
-				var oldPostList = model.postList;
-				var newPosts = A3(
-					_elm_lang$core$Basics$flip,
-					_elm_lang$core$Dict$union,
-					oldPostList.posts,
-					_elm_lang$core$Dict$fromList(
-						A2(
-							_elm_lang$core$List$map,
-							function (post) {
-								return {
-									ctor: '_Tuple2',
-									_0: post.id,
-									_1: _krisajenkins$remotedata$RemoteData$Success(post)
-								};
-							},
-							_p14._0)));
-				var newPostList = _elm_lang$core$Native_Utils.update(
-					oldPostList,
-					{posts: newPosts});
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{postList: newPostList}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			default:
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						model,
-						{
-							route: _dmsnell$photosynthesis$Main$parseRoute(_p14._0)
-						}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
+						route: _dmsnell$photosynthesis$Main$parseRoute(_p15._0)
+					}),
+				_1: _elm_lang$core$Platform_Cmd$none
+			};
 		}
 	});
 var _dmsnell$photosynthesis$Main$main = A2(

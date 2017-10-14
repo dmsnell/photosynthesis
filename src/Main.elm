@@ -9,13 +9,11 @@ import Json.Decode as JD
 import Json.Encode as JE
 import Maybe.Extra exposing (isJust)
 import Navigation exposing (Location, program)
-import RemoteData exposing (RemoteData(..), WebData)
 import UrlParser exposing (Parser, map, oneOf, parseHash, stringParam, top, (<?>))
 
 
 type Msg
-    = ReceivePostIds Int (List Int) (Maybe String)
-    | ReceivePosts (List Post)
+    = ReceivePosts (List Post)
     | UrlChange Location
 
 
@@ -34,7 +32,7 @@ type alias PostList =
     , totalPosts : Int
     , perPage : Int
     , nextPage : Maybe String
-    , posts : Dict Int (WebData Post)
+    , posts : Dict Int Post
     }
 
 
@@ -42,7 +40,7 @@ postList : PostList
 postList =
     { site = "andrewspics.wordpress.com"
     , totalPosts = 0
-    , perPage = 100
+    , perPage = 20
     , nextPage = Nothing
     , posts = Dict.empty
     }
@@ -55,16 +53,14 @@ type Route
 
 
 type alias Model =
-    { perPage : Int
-    , postList : PostList
+    { postList : PostList
     , route : Route
     }
 
 
 model : Model
 model =
-    { perPage = 20
-    , postList = postList
+    { postList = postList
     , route = Site postList.site 0
     }
 
@@ -96,10 +92,7 @@ init location =
         startFetching =
             case route of
                 Site _ _ ->
-                    [ fetchPostIds nextPostList
-                    , fetchPosts model.perPage nextPostList
-                    ]
-                        |> Cmd.batch
+                    fetchPosts nextPostList
 
                 _ ->
                     Cmd.none
@@ -143,35 +136,6 @@ routeParser =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ReceivePostIds total ids nextPage ->
-            let
-                posts =
-                    ids
-                        |> List.map (\id -> ( id, Loading ))
-                        |> Dict.fromList
-
-                oldPostList =
-                    model.postList
-
-                {-
-                   the API returns fewer and fewer results as we page
-                   so here we just want to keep the first result
-                -}
-                newTotal =
-                    if oldPostList.totalPosts == 0 then
-                        total
-                    else
-                        oldPostList.totalPosts
-
-                postList =
-                    { oldPostList
-                        | totalPosts = newTotal
-                        , nextPage = nextPage
-                        , posts = Dict.union posts oldPostList.posts
-                    }
-            in
-                ( { model | postList = postList }, Cmd.none )
-
         ReceivePosts posts ->
             let
                 oldPostList =
@@ -179,7 +143,7 @@ update msg model =
 
                 newPosts =
                     posts
-                        |> List.map (\post -> ( post.id, Success post ))
+                        |> List.map (\post -> ( post.id, post ))
                         |> Dict.fromList
                         |> (flip Dict.union) oldPostList.posts
 
@@ -213,60 +177,50 @@ view model =
                         posts =
                             Dict.values model.postList.posts
                                 |> List.filter
-                                    (\post ->
-                                        case post of
-                                            Success { imageUrl } ->
-                                                isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
-
-                                            _ ->
-                                                True
+                                    (\{ imageUrl } ->
+                                        isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
                                     )
                                 |> List.reverse
-                                |> List.take ((page + 1) * model.perPage)
+                                |> List.take ((page + 1) * model.postList.perPage)
 
-                        post remotePost =
-                            case remotePost of
-                                Success { id, title, content, imageUrl } ->
-                                    let
-                                        excerptContainerClasses =
-                                            joinClasses
-                                                [ ( "excerpt-container", True )
-                                                , ( "empty", String.isEmpty content )
-                                                ]
+                        post { id, title, content, imageUrl } =
+                            let
+                                excerptContainerClasses =
+                                    joinClasses
+                                        [ ( "excerpt-container", True )
+                                        , ( "empty", String.isEmpty content )
+                                        ]
 
-                                        excerptClasses =
-                                            joinClasses
-                                                [ ( "excerpt", True )
-                                                , ( "short"
-                                                  , (False
-                                                        || String.endsWith "[&hellip;]</p>\n" content
-                                                        || String.endsWith "&hellip;</p>\n" content
-                                                    )
-                                                        |> not
-                                                  )
-                                                , ( "single-line"
-                                                  , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
-                                                  )
-                                                ]
-                                    in
-                                        div [ class "post" ]
-                                            [ img
-                                                [ class "primary"
-                                                , src <| es imageUrl
-                                                ]
-                                                []
-                                            , div
-                                                [ class excerptContainerClasses ]
-                                                [ div
-                                                    [ class excerptClasses
-                                                    , rawHtml content
-                                                    ]
-                                                    []
-                                                ]
+                                excerptClasses =
+                                    joinClasses
+                                        [ ( "excerpt", True )
+                                        , ( "short"
+                                          , (False
+                                                || String.endsWith "[&hellip;]</p>\n" content
+                                                || String.endsWith "&hellip;</p>\n" content
+                                            )
+                                                |> not
+                                          )
+                                        , ( "single-line"
+                                          , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
+                                          )
+                                        ]
+                            in
+                                div [ class "post" ]
+                                    [ img
+                                        [ class "primary"
+                                        , src <| es imageUrl
+                                        ]
+                                        []
+                                    , div
+                                        [ class excerptContainerClasses ]
+                                        [ div
+                                            [ class excerptClasses
+                                            , rawHtml content
                                             ]
-
-                                _ ->
-                                    div [] [ text "Loading…" ]
+                                            []
+                                        ]
+                                    ]
                     in
                         div []
                             [ text "Posts"
@@ -337,46 +291,8 @@ body {
 """
 
 
-fetchPostIds : PostList -> Cmd Msg
-fetchPostIds postList =
-    let
-        url =
-            "https://public-api.wordpress.com/rest/v1.2/sites/" ++ postList.site ++ "/posts"
-
-        decoder =
-            JD.map3
-                ReceivePostIds
-                (JD.field "found" JD.int)
-                (JD.field "posts" (JD.list (JD.field "ID" JD.int)))
-                (JD.at [ "meta", "next_page" ] JD.string |> JD.maybe)
-
-        toMsg result =
-            case result of
-                Ok msg ->
-                    msg
-
-                Err _ ->
-                    ReceivePostIds 0 [] Nothing
-
-        pageHandle =
-            postList.nextPage
-                |> Maybe.map (\handle -> [ ( "page_handle", handle ) ])
-                |> Maybe.withDefault []
-
-        queryParams =
-            [ ( "number", toString postList.perPage )
-            , ( "fields", "ID,date" )
-            ]
-                |> List.append pageHandle
-    in
-        get url
-            |> withQueryParams queryParams
-            |> withExpect (Http.expectJson decoder)
-            |> send toMsg
-
-
-fetchPosts : Int -> PostList -> Cmd Msg
-fetchPosts perPage postList =
+fetchPosts : PostList -> Cmd Msg
+fetchPosts postList =
     let
         url =
             "https://public-api.wordpress.com/rest/v1.2/sites/" ++ postList.site ++ "/posts"
@@ -411,7 +327,7 @@ fetchPosts perPage postList =
                     ReceivePosts []
 
         queryParams =
-            [ ( "number", toString perPage )
+            [ ( "number", toString postList.perPage )
             , ( "fields", "ID,date,title,excerpt,URL,attachments" )
             ]
     in
