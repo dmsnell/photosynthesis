@@ -1,13 +1,14 @@
 html,
 head,
 body { 
-    padding :0; 
+    padding: 0; 
     margin: 0; 
 }
 
 body { 
     font-family: calibri, helvetica, arial, sans-serif; 
     background-color: black;
+    overflow-x: hidden;
 }
 
 .post-list img {
@@ -48,4 +49,61 @@ body {
 
 .post-list .post .excerpt.single-line {
     width: 15em;
+}
+
+/* thanks http://tobiasahlin.com/spinkit/ */
+.network-spinner {
+    position: fixed;
+    top: 20px;
+    right: 10px;
+    width: 50px;
+    height: 10px;
+    text-align: center;
+    font-size: 10px;
+}
+  
+.network-spinner > div {
+    background-color: #777;
+    height: 100%;
+    width: 6px;
+    margin-left: 2px;
+    display: inline-block;
+    opacity: 0;
+    animation: sk-stretchdelay 1.5s infinite ease-in-out;
+    animation-delay: 0.4s;
+}
+  
+.network-spinner .network-spinner__2 {
+    animation-delay: 0.6s;
+}
+  
+.network-spinner .network-spinner__3 {
+    animation-delay: 0.8s;
+}
+  
+.network-spinner .network-spinner__4 {
+    animation-delay: 1.0s;
+  }
+  
+.network-spinner .network-spinner__5 {
+    animation-delay: 1.2s;
+}
+  
+@keyframes sk-stretchdelay {
+    0% { 
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    20% { 
+        transform: scaleY(2.0); 
+    }
+    40% {
+        transform: scaleY(0.5);
+    }
+    100% {
+        opacity: 0;
+        transform: scaleY(1.0);
+    }
 }

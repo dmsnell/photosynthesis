@@ -20,4 +20,4 @@ Run locally
 elm reactor
 ```
 
-Open in browser at `localhost:8000`
+Open in browser at `localhost:8000` and open `reactor.html`

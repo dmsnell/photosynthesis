@@ -1,4 +1,4 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Dict exposing (Dict)
 import Html exposing (Html, div, img, node, text)
@@ -7,13 +7,19 @@ import HttpBuilder exposing (..)
 import Http exposing (expectJson)
 import Json.Decode as JD
 import Json.Encode as JE
-import Maybe.Extra exposing (isJust)
 import Navigation exposing (Location, program)
 import UrlParser exposing (Parser, map, oneOf, parseHash, stringParam, top, (<?>))
 
 
+port requestNextPage : (() -> msg) -> Sub msg
+
+
 type Msg
-    = ReceivePosts (List Post)
+    = NetworkError
+    | NetworkRequest (RequestBuilder Msg)
+    | NetworkSuccess Msg
+    | ReceivePosts (Maybe String) (List Post)
+    | RequestNextPage
     | UrlChange Location
 
 
@@ -32,7 +38,7 @@ type alias PostList =
     , totalPosts : Int
     , perPage : Int
     , nextPage : Maybe String
-    , posts : Dict Int Post
+    , posts : Dict String Post
     }
 
 
@@ -48,20 +54,22 @@ postList =
 
 type Route
     = NoSiteGiven
-    | Site String Int
+    | Site String
     | SiteNotFound
 
 
 type alias Model =
-    { postList : PostList
+    { isNetworkActive : Bool
+    , postList : PostList
     , route : Route
     }
 
 
 model : Model
 model =
-    { postList = postList
-    , route = Site postList.site 0
+    { isNetworkActive = False
+    , postList = postList
+    , route = Site postList.site
     }
 
 
@@ -69,10 +77,15 @@ main : Program Never Model Msg
 main =
     program UrlChange
         { init = init
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         , update = update
         , view = view
         }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    requestNextPage <| always RequestNextPage
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -83,7 +96,7 @@ init location =
 
         nextPostList =
             case route of
-                Site site _ ->
+                Site site ->
                     { postList | site = site }
 
                 _ ->
@@ -91,18 +104,21 @@ init location =
 
         startFetching =
             case route of
-                Site _ _ ->
-                    fetchPosts nextPostList
+                Site _ ->
+                    Just <| fetchPosts nextPostList
 
                 _ ->
-                    Cmd.none
+                    Nothing
+
+        nextModel =
+            { model
+                | postList = nextPostList
+                , route = route
+            }
     in
-        ( { model
-            | postList = nextPostList
-            , route = route
-          }
-        , startFetching
-        )
+        startFetching
+            |> Maybe.map (\m -> update m nextModel)
+            |> Maybe.withDefault ( nextModel, Cmd.none )
 
 
 parseRoute : Location -> Route
@@ -114,7 +130,7 @@ routeParser : Parser (Route -> a) a
 routeParser =
     let
         defaultSite =
-            Site postList.site 0
+            Site postList.site
 
         siteRoute s =
             s
@@ -123,7 +139,7 @@ routeParser =
                         if String.isEmpty s then
                             NoSiteGiven
                         else
-                            Site s 0
+                            Site s
                     )
                 |> Maybe.withDefault defaultSite
     in
@@ -136,21 +152,63 @@ routeParser =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ReceivePosts posts ->
+        NetworkError ->
+            ( { model | isNetworkActive = False }, Cmd.none )
+
+        NetworkRequest request ->
+            let
+                toMsg response =
+                    response
+                        |> Result.map NetworkSuccess
+                        |> Result.withDefault NetworkError
+            in
+                ( { model | isNetworkActive = True }, send toMsg request )
+
+        NetworkSuccess msg ->
+            update msg { model | isNetworkActive = False }
+
+        ReceivePosts nextPage posts ->
             let
                 oldPostList =
                     model.postList
 
+                validPost { imageUrl } =
+                    let
+                        url =
+                            imageUrl
+                                |> Maybe.withDefault ""
+                    in
+                        [ ".jpg"
+                        , ".png"
+                        , ".gif"
+                        , ".svg"
+                        , ".webp"
+                        ]
+                            |> List.any ((flip String.endsWith) url)
+
                 newPosts =
                     posts
-                        |> List.map (\post -> ( post.id, post ))
+                        |> List.filter validPost
+                        |> List.map (\post -> ( post.createdAt, post ))
                         |> Dict.fromList
                         |> (flip Dict.union) oldPostList.posts
 
                 newPostList =
-                    ({ oldPostList | posts = newPosts })
+                    ({ oldPostList
+                        | posts = newPosts
+                        , nextPage = nextPage
+                     }
+                    )
             in
                 ( { model | postList = newPostList }, Cmd.none )
+
+        RequestNextPage ->
+            if model.isNetworkActive then
+                ( model, Cmd.none )
+            else
+                fetchNextPage model.postList
+                    |> Maybe.map (\m -> update m model)
+                    |> Maybe.withDefault ( model, Cmd.none )
 
         UrlChange location ->
             ( { model | route = parseRoute location }, Cmd.none )
@@ -163,76 +221,81 @@ view model =
             List.filter (Tuple.second >> ((==) True))
                 >> List.map Tuple.first
                 >> String.join " "
-    in
-        case model.route of
-            NoSiteGiven ->
-                div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
 
-            Site site page ->
-                let
-                    es =
-                        Maybe.withDefault ""
+        body =
+            case model.route of
+                NoSiteGiven ->
+                    div [] [ text "Add a site in the URL query string: e.g. '?site=design.blog'" ]
 
-                    posts =
-                        Dict.values model.postList.posts
-                            |> List.filter
-                                (\{ imageUrl } ->
-                                    isJust imageUrl && not (String.endsWith ".mov" <| es imageUrl)
-                                )
-                            |> List.reverse
-                            |> List.take ((page + 1) * model.postList.perPage)
+                Site site ->
+                    let
+                        es =
+                            Maybe.withDefault ""
 
-                    post { id, title, content, imageUrl } =
-                        let
-                            excerptContainerClasses =
-                                joinClasses
-                                    [ ( "excerpt-container", True )
-                                    , ( "empty", String.isEmpty content )
-                                    ]
+                        posts =
+                            model.postList.posts
+                                |> Dict.values
+                                |> List.reverse
 
-                            excerptClasses =
-                                joinClasses
-                                    [ ( "excerpt", True )
-                                    , ( "short"
-                                      , (False
-                                            || String.endsWith "[&hellip;]</p>\n" content
-                                            || String.endsWith "&hellip;</p>\n" content
-                                        )
-                                            |> not
-                                      )
-                                    , ( "single-line"
-                                      , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
-                                      )
-                                    ]
-                        in
-                            div [ class "post" ]
-                                [ img
-                                    [ class "primary"
-                                    , src <| es imageUrl
-                                    ]
-                                    []
-                                , div
-                                    [ class excerptContainerClasses ]
-                                    [ div
-                                        [ class excerptClasses
-                                        , rawHtml content
+                        post { id, title, content, imageUrl } =
+                            let
+                                excerptContainerClasses =
+                                    joinClasses
+                                        [ ( "excerpt-container", True )
+                                        , ( "empty", String.isEmpty content )
+                                        ]
+
+                                excerptClasses =
+                                    joinClasses
+                                        [ ( "excerpt", True )
+                                        , ( "short"
+                                          , (False
+                                                || String.endsWith "[&hellip;]</p>\n" content
+                                                || String.endsWith "&hellip;</p>\n" content
+                                            )
+                                                |> not
+                                          )
+                                        , ( "single-line"
+                                          , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
+                                          )
+                                        ]
+                            in
+                                div [ class "post" ]
+                                    [ img
+                                        [ class "primary"
+                                        , src <| es imageUrl
                                         ]
                                         []
+                                    , div
+                                        [ class excerptContainerClasses ]
+                                        [ div
+                                            [ class excerptClasses
+                                            , rawHtml content
+                                            ]
+                                            []
+                                        ]
                                     ]
-                                ]
-                in
-                    div []
-                        [ text "Posts"
-                        , posts
+                    in
+                        posts
                             |> List.map post
                             |> div [ class "post-list" ]
-                        ]
 
-            SiteNotFound ->
-                div [] []
+                SiteNotFound ->
+                    div [] []
+    in
+        div []
+            [ networkSpinner model.isNetworkActive
+            , body
+            ]
 
 
-fetchPosts : PostList -> Cmd Msg
+fetchNextPage : PostList -> Maybe Msg
+fetchNextPage postList =
+    postList.nextPage
+        |> Maybe.map (always <| fetchPosts postList)
+
+
+fetchPosts : PostList -> Msg
 fetchPosts postList =
     let
         url =
@@ -243,8 +306,9 @@ fetchPosts postList =
                 |> JD.map (List.head >> Maybe.map Tuple.second)
 
         decoder =
-            JD.map
+            JD.map2
                 ReceivePosts
+                (JD.maybe <| JD.at [ "meta", "next_page" ] JD.string)
                 (JD.field "posts"
                     (JD.list
                         (JD.map6
@@ -259,25 +323,48 @@ fetchPosts postList =
                     )
                 )
 
-        toMsg result =
-            case result of
-                Ok msg ->
-                    msg
-
-                Err _ ->
-                    ReceivePosts []
+        pageHandle =
+            postList.nextPage
+                |> Maybe.map (\s -> [ ( "page_handle", s ) ])
+                |> Maybe.withDefault []
 
         queryParams =
             [ ( "number", toString postList.perPage )
             , ( "fields", "ID,date,title,excerpt,URL,attachments" )
             ]
+                |> List.append pageHandle
     in
         get url
             |> withQueryParams queryParams
             |> withExpect (Http.expectJson decoder)
-            |> send toMsg
+            |> NetworkRequest
 
 
 rawHtml : String -> Html.Attribute Msg
 rawHtml =
     property "innerHTML" << JE.string
+
+
+networkSpinner : Bool -> Html msg
+networkSpinner isActive =
+    if isActive then
+        networkSpinnerHtml
+    else
+        text ""
+
+
+
+{-
+   thanks http://tobiasahlin.com/spinkit/
+-}
+
+
+networkSpinnerHtml : Html msg
+networkSpinnerHtml =
+    div [ class "network-spinner" ]
+        [ div [ class "network-spinner__1" ] []
+        , div [ class "network-spinner__2" ] []
+        , div [ class "network-spinner__3" ] []
+        , div [ class "network-spinner__4" ] []
+        , div [ class "network-spinner__5" ] []
+        ]
