@@ -11066,6 +11066,12 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 				var post = function (_p4) {
 					var _p5 = _p4;
 					var _p6 = _p5.content;
+					var imageUrl = A2(
+						_elm_lang$core$Maybe$map,
+						function (_) {
+							return _.url;
+						},
+						_elm_lang$core$List$head(_p5.attachments));
 					var excerptClasses = joinClasses(
 						{
 							ctor: '::',
@@ -11137,7 +11143,7 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 														_elm_lang$core$Regex$All,
 														_elm_lang$core$Regex$regex('quality=\\d+'),
 														_elm_lang$core$Basics$always('quality=97'),
-														es(_p5.imageUrl))),
+														es(imageUrl))),
 												_1: {ctor: '[]'}
 											}
 										},
@@ -11218,7 +11224,6 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 		});
 };
 var _dmsnell$photosynthesis$Main$postList = {site: 'andrewspics.wordpress.com', totalPosts: 0, perPage: 20, nextPage: _elm_lang$core$Maybe$Nothing, posts: _elm_lang$core$Dict$empty};
-var _dmsnell$photosynthesis$Main$emptyAttachment = {id: 0, date: _elm_lang$core$Maybe$Nothing, caption: _elm_lang$core$Maybe$Nothing, exif: _elm_lang$core$Maybe$Nothing, title: _elm_lang$core$Maybe$Nothing, url: ''};
 var _dmsnell$photosynthesis$Main$requestNextPage = _elm_lang$core$Native_Platform.incomingPort(
 	'requestNextPage',
 	_elm_lang$core$Json_Decode$null(
@@ -11235,9 +11240,9 @@ var _dmsnell$photosynthesis$Main$Attachment = F6(
 	function (a, b, c, d, e, f) {
 		return {id: a, date: b, caption: c, exif: d, title: e, url: f};
 	});
-var _dmsnell$photosynthesis$Main$Post = F7(
-	function (a, b, c, d, e, f, g) {
-		return {id: a, title: b, content: c, createdAt: d, url: e, attachments: f, imageUrl: g};
+var _dmsnell$photosynthesis$Main$Post = F6(
+	function (a, b, c, d, e, f) {
+		return {id: a, title: b, content: c, createdAt: d, url: e, attachments: f};
 	});
 var _dmsnell$photosynthesis$Main$PostList = F5(
 	function (a, b, c, d, e) {
@@ -11336,16 +11341,6 @@ var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
 			A2(_elm_lang$core$Json_Decode$field, 'exif', exif)),
 		A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
 		A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string));
-	var attributes = A2(
-		_elm_lang$core$Json_Decode$map,
-		function (_p9) {
-			return A2(
-				_elm_lang$core$Maybe$map,
-				_elm_lang$core$Tuple$second,
-				_elm_lang$core$List$head(_p9));
-		},
-		_elm_lang$core$Json_Decode$keyValuePairs(
-			A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string)));
 	var decoder = A3(
 		_elm_lang$core$Json_Decode$map2,
 		_dmsnell$photosynthesis$Main$ReceivePosts,
@@ -11366,8 +11361,8 @@ var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
 			_elm_lang$core$Json_Decode$field,
 			'posts',
 			_elm_lang$core$Json_Decode$list(
-				A8(
-					_elm_lang$core$Json_Decode$map7,
+				A7(
+					_elm_lang$core$Json_Decode$map6,
 					_dmsnell$photosynthesis$Main$Post,
 					A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int),
 					A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
@@ -11380,8 +11375,17 @@ var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
 						A2(
 							_elm_lang$core$Json_Decode$map,
 							_elm_lang$core$List$map(_elm_lang$core$Tuple$second),
-							_elm_lang$core$Json_Decode$keyValuePairs(attachment))),
-					A2(_elm_lang$core$Json_Decode$field, 'attachments', attributes)))));
+							_elm_lang$core$Json_Decode$keyValuePairs(attachment)))))));
+	var attributes = A2(
+		_elm_lang$core$Json_Decode$map,
+		function (_p9) {
+			return A2(
+				_elm_lang$core$Maybe$map,
+				_elm_lang$core$Tuple$second,
+				_elm_lang$core$List$head(_p9));
+		},
+		_elm_lang$core$Json_Decode$keyValuePairs(
+			A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string)));
 	var url = A2(
 		_elm_lang$core$Basics_ops['++'],
 		'https://public-api.wordpress.com/rest/v1.2/sites/',
@@ -11486,15 +11490,18 @@ var _dmsnell$photosynthesis$Main$update = F2(
 					model = _v5;
 					continue update;
 				case 'ReceivePosts':
-					var validPost = function (_p12) {
-						var _p13 = _p12;
+					var validImageUrl = function (s) {
 						var url = function (s) {
-							return A2(_elm_lang$core$String$contains, '?', s) ? A2(_elm_community$string_extra$String_Extra$leftOf, '?', s) : s;
-						}(
-							A2(_elm_lang$core$Maybe$withDefault, '', _p13.imageUrl));
+							return function (s) {
+								return A2(_elm_lang$core$String$contains, '?', s) ? A2(_elm_community$string_extra$String_Extra$leftOf, '?', s) : s;
+							}(s);
+						};
 						return A2(
 							_elm_lang$core$List$any,
-							A2(_elm_lang$core$Basics$flip, _elm_lang$core$String$endsWith, url),
+							A2(
+								_elm_lang$core$Basics$flip,
+								_elm_lang$core$String$endsWith,
+								url(s)),
 							{
 								ctor: '::',
 								_0: '.jpg',
@@ -11516,6 +11523,18 @@ var _dmsnell$photosynthesis$Main$update = F2(
 									}
 								}
 							});
+					};
+					var validPost = function (_p12) {
+						var _p13 = _p12;
+						return A2(
+							_elm_lang$core$List$any,
+							function (_p14) {
+								return validImageUrl(
+									function (_) {
+										return _.url;
+									}(_p14));
+							},
+							_p13.attachments);
 					};
 					var oldPostList = model.postList;
 					var newPosts = A3(
@@ -11565,18 +11584,18 @@ var _dmsnell$photosynthesis$Main$update = F2(
 var _dmsnell$photosynthesis$Main$init = function (location) {
 	var route = _dmsnell$photosynthesis$Main$parseRoute(location);
 	var nextPostList = function () {
-		var _p14 = route;
-		if (_p14.ctor === 'Site') {
+		var _p15 = route;
+		if (_p15.ctor === 'Site') {
 			return _elm_lang$core$Native_Utils.update(
 				_dmsnell$photosynthesis$Main$postList,
-				{site: _p14._0});
+				{site: _p15._0});
 		} else {
 			return _dmsnell$photosynthesis$Main$postList;
 		}
 	}();
 	var startFetching = function () {
-		var _p15 = route;
-		if (_p15.ctor === 'Site') {
+		var _p16 = route;
+		if (_p16.ctor === 'Site') {
 			return _elm_lang$core$Maybe$Just(
 				_dmsnell$photosynthesis$Main$fetchPosts(nextPostList));
 		} else {

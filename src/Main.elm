@@ -51,16 +51,6 @@ type alias Attachment =
     }
 
 
-emptyAttachment =
-    { id = 0
-    , date = Nothing
-    , caption = Nothing
-    , exif = Nothing
-    , title = Nothing
-    , url = ""
-    }
-
-
 type alias Post =
     { id : Int
     , title : String
@@ -68,7 +58,6 @@ type alias Post =
     , createdAt : String
     , url : String
     , attachments : List Attachment
-    , imageUrl : Maybe String
     }
 
 
@@ -211,11 +200,10 @@ update msg model =
                 oldPostList =
                     model.postList
 
-                validPost { imageUrl } =
+                validImageUrl s =
                     let
-                        url =
-                            imageUrl
-                                |> Maybe.withDefault ""
+                        url s =
+                            s
                                 |> (\s ->
                                         if String.contains "?" s then
                                             leftOf "?" s
@@ -229,7 +217,10 @@ update msg model =
                         , ".svg"
                         , ".webp"
                         ]
-                            |> List.any ((flip String.endsWith) url)
+                            |> List.any ((flip String.endsWith) (url s))
+
+                validPost { attachments } =
+                    List.any (.url >> validImageUrl) attachments
 
                 newPosts =
                     posts
@@ -238,8 +229,6 @@ update msg model =
                         |> Dict.fromList
                         |> (flip Dict.union) oldPostList.posts
 
-                -- rejects =
-                --     posts |> List.filter (not << validPost) |> Debug.log "Rejects"
                 newPostList =
                     ({ oldPostList
                         | posts = newPosts
@@ -284,7 +273,7 @@ view model =
                                 |> Dict.values
                                 |> List.reverse
 
-                        post { id, title, content, imageUrl, url } =
+                        post { id, title, content, attachments, url } =
                             let
                                 excerptContainerClasses =
                                     joinClasses
@@ -306,6 +295,9 @@ view model =
                                           , (String.length content > 80 && String.length content < 160 && not (String.contains "<br" content))
                                           )
                                         ]
+
+                                imageUrl =
+                                    List.head attachments |> Maybe.map .url
                             in
                                 div [ class "post" ]
                                     [ a [ href url ]
@@ -394,7 +386,7 @@ fetchPosts postList =
                 (JD.maybe <| JD.at [ "meta", "next_page" ] JD.string)
                 (JD.field "posts"
                     (JD.list
-                        (JD.map7
+                        (JD.map6
                             Post
                             (JD.field "ID" JD.int)
                             (JD.field "title" JD.string)
@@ -405,7 +397,6 @@ fetchPosts postList =
                                 |> JD.map (List.map Tuple.second)
                                 |> JD.field "attachments"
                             )
-                            (JD.field "attachments" attributes)
                         )
                     )
                 )
