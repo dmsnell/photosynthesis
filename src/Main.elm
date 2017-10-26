@@ -8,6 +8,8 @@ import Http exposing (expectJson)
 import Json.Decode as JD
 import Json.Encode as JE
 import Navigation exposing (Location, program)
+import Regex as RE
+import String.Extra exposing (leftOf)
 import UrlParser exposing (Parser, map, oneOf, parseHash, stringParam, top, (<?>))
 
 
@@ -184,7 +186,7 @@ update msg model =
                         , ".svg"
                         , ".webp"
                         ]
-                            |> List.any ((flip String.endsWith) url)
+                            |> List.any ((flip String.endsWith) (leftOf "?" url))
 
                 newPosts =
                     posts
@@ -263,7 +265,7 @@ view model =
                                 div [ class "post" ]
                                     [ img
                                         [ class "primary"
-                                        , src <| es imageUrl
+                                        , src <| RE.replace RE.All (RE.regex "quality=\\d+") (always "quality=97") <| es imageUrl
                                         ]
                                         []
                                     , div
@@ -276,9 +278,14 @@ view model =
                                         ]
                                     ]
                     in
-                        posts
-                            |> List.map post
-                            |> div [ class "post-list" ]
+                        case List.isEmpty posts of
+                            True ->
+                                div [ class "loading-message" ] [ text "Loading…" ]
+
+                            False ->
+                                posts
+                                    |> List.map post
+                                    |> div [ class "post-list" ]
 
                 SiteNotFound ->
                     div [] []

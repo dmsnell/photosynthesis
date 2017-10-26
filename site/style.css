@@ -11,6 +11,21 @@ body {
     overflow-x: hidden;
 }
 
+.loading-message {
+    color: #aaa;
+    font-size: 48px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate( -50%, -50% );
+    animation: text-fade-pulse 2s infinite ease-in-out;
+}
+
+@keyframes text-fade-pulse {
+    0% { opacity: 1 }
+    100% { opacity: 0.1 }
+}
+
 .post-list img {
     width: 100%;
     height: auto;
