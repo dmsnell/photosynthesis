@@ -11116,23 +11116,34 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 						{
 							ctor: '::',
 							_0: A2(
-								_elm_lang$html$Html$img,
+								_elm_lang$html$Html$a,
 								{
 									ctor: '::',
-									_0: _elm_lang$html$Html_Attributes$class('primary'),
-									_1: {
-										ctor: '::',
-										_0: _elm_lang$html$Html_Attributes$src(
-											A4(
-												_elm_lang$core$Regex$replace,
-												_elm_lang$core$Regex$All,
-												_elm_lang$core$Regex$regex('quality=\\d+'),
-												_elm_lang$core$Basics$always('quality=97'),
-												es(_p5.imageUrl))),
-										_1: {ctor: '[]'}
-									}
+									_0: _elm_lang$html$Html_Attributes$href(_p5.url),
+									_1: {ctor: '[]'}
 								},
-								{ctor: '[]'}),
+								{
+									ctor: '::',
+									_0: A2(
+										_elm_lang$html$Html$img,
+										{
+											ctor: '::',
+											_0: _elm_lang$html$Html_Attributes$class('primary'),
+											_1: {
+												ctor: '::',
+												_0: _elm_lang$html$Html_Attributes$src(
+													A4(
+														_elm_lang$core$Regex$replace,
+														_elm_lang$core$Regex$All,
+														_elm_lang$core$Regex$regex('quality=\\d+'),
+														_elm_lang$core$Basics$always('quality=97'),
+														es(_p5.imageUrl))),
+												_1: {ctor: '[]'}
+											}
+										},
+										{ctor: '[]'}),
+									_1: {ctor: '[]'}
+								}),
 							_1: {
 								ctor: '::',
 								_0: A2(

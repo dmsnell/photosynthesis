@@ -1,8 +1,8 @@
 port module Main exposing (..)
 
 import Dict exposing (Dict)
-import Html exposing (Html, div, img, node, text)
-import Html.Attributes exposing (class, property, src)
+import Html exposing (Html, a, div, img, node, text)
+import Html.Attributes exposing (class, href, property, src)
 import HttpBuilder exposing (..)
 import Http exposing (expectJson)
 import Json.Decode as JD
@@ -239,7 +239,7 @@ view model =
                                 |> Dict.values
                                 |> List.reverse
 
-                        post { id, title, content, imageUrl } =
+                        post { id, title, content, imageUrl, url } =
                             let
                                 excerptContainerClasses =
                                     joinClasses
@@ -263,11 +263,13 @@ view model =
                                         ]
                             in
                                 div [ class "post" ]
-                                    [ img
-                                        [ class "primary"
-                                        , src <| RE.replace RE.All (RE.regex "quality=\\d+") (always "quality=97") <| es imageUrl
+                                    [ a [ href url ]
+                                        [ img
+                                            [ class "primary"
+                                            , src <| RE.replace RE.All (RE.regex "quality=\\d+") (always "quality=97") <| es imageUrl
+                                            ]
+                                            []
                                         ]
-                                        []
                                     , div
                                         [ class excerptContainerClasses ]
                                         [ div
