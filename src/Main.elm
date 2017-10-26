@@ -179,6 +179,12 @@ update msg model =
                         url =
                             imageUrl
                                 |> Maybe.withDefault ""
+                                |> (\s ->
+                                        if String.contains "?" s then
+                                            leftOf "?" s
+                                        else
+                                            s
+                                   )
                     in
                         [ ".jpg"
                         , ".png"
@@ -186,7 +192,7 @@ update msg model =
                         , ".svg"
                         , ".webp"
                         ]
-                            |> List.any ((flip String.endsWith) (leftOf "?" url))
+                            |> List.any ((flip String.endsWith) url)
 
                 newPosts =
                     posts

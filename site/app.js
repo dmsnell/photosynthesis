@@ -11427,13 +11427,13 @@ var _dmsnell$photosynthesis$Main$update = F2(
 				case 'ReceivePosts':
 					var validPost = function (_p11) {
 						var _p12 = _p11;
-						var url = A2(_elm_lang$core$Maybe$withDefault, '', _p12.imageUrl);
+						var url = function (s) {
+							return A2(_elm_lang$core$String$contains, '?', s) ? A2(_elm_community$string_extra$String_Extra$leftOf, '?', s) : s;
+						}(
+							A2(_elm_lang$core$Maybe$withDefault, '', _p12.imageUrl));
 						return A2(
 							_elm_lang$core$List$any,
-							A2(
-								_elm_lang$core$Basics$flip,
-								_elm_lang$core$String$endsWith,
-								A2(_elm_community$string_extra$String_Extra$leftOf, '?', url)),
+							A2(_elm_lang$core$Basics$flip, _elm_lang$core$String$endsWith, url),
 							{
 								ctor: '::',
 								_0: '.jpg',
