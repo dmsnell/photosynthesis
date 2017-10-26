@@ -11218,13 +11218,26 @@ var _dmsnell$photosynthesis$Main$view = function (model) {
 		});
 };
 var _dmsnell$photosynthesis$Main$postList = {site: 'andrewspics.wordpress.com', totalPosts: 0, perPage: 20, nextPage: _elm_lang$core$Maybe$Nothing, posts: _elm_lang$core$Dict$empty};
+var _dmsnell$photosynthesis$Main$emptyAttachment = {id: 0, date: _elm_lang$core$Maybe$Nothing, caption: _elm_lang$core$Maybe$Nothing, exif: _elm_lang$core$Maybe$Nothing, title: _elm_lang$core$Maybe$Nothing, url: ''};
 var _dmsnell$photosynthesis$Main$requestNextPage = _elm_lang$core$Native_Platform.incomingPort(
 	'requestNextPage',
 	_elm_lang$core$Json_Decode$null(
 		{ctor: '_Tuple0'}));
-var _dmsnell$photosynthesis$Main$Post = F6(
+var _dmsnell$photosynthesis$Main$Coords = F2(
+	function (a, b) {
+		return {latitutde: a, longitude: b};
+	});
+var _dmsnell$photosynthesis$Main$Exif = F6(
 	function (a, b, c, d, e, f) {
-		return {id: a, title: b, content: c, createdAt: d, url: e, imageUrl: f};
+		return {aperture: a, camera: b, focalLength: c, iso: d, location: e, shutterSpeed: f};
+	});
+var _dmsnell$photosynthesis$Main$Attachment = F6(
+	function (a, b, c, d, e, f) {
+		return {id: a, date: b, caption: c, exif: d, title: e, url: f};
+	});
+var _dmsnell$photosynthesis$Main$Post = F7(
+	function (a, b, c, d, e, f, g) {
+		return {id: a, title: b, content: c, createdAt: d, url: e, attachments: f, imageUrl: g};
 	});
 var _dmsnell$photosynthesis$Main$PostList = F5(
 	function (a, b, c, d, e) {
@@ -11282,13 +11295,54 @@ var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
 				_1: {ctor: '[]'}
 			}
 		});
+	var exif = function () {
+		var asType = F2(
+			function (cast, name) {
+				return A2(
+					_elm_lang$core$Json_Decode$map,
+					function (_p8) {
+						return A2(
+							_elm_lang$core$Maybe$andThen,
+							_elm_lang$core$Result$toMaybe,
+							A2(_elm_lang$core$Maybe$map, cast, _p8));
+					},
+					_elm_lang$core$Json_Decode$maybe(
+						A2(_elm_lang$core$Json_Decode$field, name, _elm_lang$core$Json_Decode$string)));
+			});
+		return A7(
+			_elm_lang$core$Json_Decode$map6,
+			_dmsnell$photosynthesis$Main$Exif,
+			A2(asType, _elm_lang$core$String$toFloat, 'aperture'),
+			_elm_lang$core$Json_Decode$maybe(
+				A2(_elm_lang$core$Json_Decode$field, 'camera', _elm_lang$core$Json_Decode$string)),
+			A2(asType, _elm_lang$core$String$toFloat, 'focal_length'),
+			A2(asType, _elm_lang$core$String$toInt, 'iso'),
+			A3(
+				_elm_lang$core$Json_Decode$map2,
+				_elm_lang$core$Maybe$map2(_dmsnell$photosynthesis$Main$Coords),
+				_elm_lang$core$Json_Decode$maybe(
+					A2(_elm_lang$core$Json_Decode$field, 'latitude', _elm_lang$core$Json_Decode$float)),
+				_elm_lang$core$Json_Decode$maybe(
+					A2(_elm_lang$core$Json_Decode$field, 'longitude', _elm_lang$core$Json_Decode$float))),
+			A2(asType, _elm_lang$core$String$toFloat, 'shutter_speed'));
+	}();
+	var attachment = A7(
+		_elm_lang$core$Json_Decode$map6,
+		_dmsnell$photosynthesis$Main$Attachment,
+		A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int),
+		A2(_elm_lang$core$Json_Decode$field, 'date', _elm_lang$core$Json_Decode$string),
+		A2(_elm_lang$core$Json_Decode$field, 'caption', _elm_lang$core$Json_Decode$string),
+		_elm_lang$core$Json_Decode$maybe(
+			A2(_elm_lang$core$Json_Decode$field, 'exif', exif)),
+		A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
+		A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string));
 	var attributes = A2(
 		_elm_lang$core$Json_Decode$map,
-		function (_p8) {
+		function (_p9) {
 			return A2(
 				_elm_lang$core$Maybe$map,
 				_elm_lang$core$Tuple$second,
-				_elm_lang$core$List$head(_p8));
+				_elm_lang$core$List$head(_p9));
 		},
 		_elm_lang$core$Json_Decode$keyValuePairs(
 			A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string)));
@@ -11312,14 +11366,21 @@ var _dmsnell$photosynthesis$Main$fetchPosts = function (postList) {
 			_elm_lang$core$Json_Decode$field,
 			'posts',
 			_elm_lang$core$Json_Decode$list(
-				A7(
-					_elm_lang$core$Json_Decode$map6,
+				A8(
+					_elm_lang$core$Json_Decode$map7,
 					_dmsnell$photosynthesis$Main$Post,
 					A2(_elm_lang$core$Json_Decode$field, 'ID', _elm_lang$core$Json_Decode$int),
 					A2(_elm_lang$core$Json_Decode$field, 'title', _elm_lang$core$Json_Decode$string),
 					A2(_elm_lang$core$Json_Decode$field, 'excerpt', _elm_lang$core$Json_Decode$string),
 					A2(_elm_lang$core$Json_Decode$field, 'date', _elm_lang$core$Json_Decode$string),
 					A2(_elm_lang$core$Json_Decode$field, 'URL', _elm_lang$core$Json_Decode$string),
+					A2(
+						_elm_lang$core$Json_Decode$field,
+						'attachments',
+						A2(
+							_elm_lang$core$Json_Decode$map,
+							_elm_lang$core$List$map(_elm_lang$core$Tuple$second),
+							_elm_lang$core$Json_Decode$keyValuePairs(attachment))),
 					A2(_elm_lang$core$Json_Decode$field, 'attachments', attributes)))));
 	var url = A2(
 		_elm_lang$core$Basics_ops['++'],
@@ -11382,18 +11443,18 @@ var _dmsnell$photosynthesis$Main$routeParser = function () {
 			}
 		});
 }();
-var _dmsnell$photosynthesis$Main$parseRoute = function (_p9) {
+var _dmsnell$photosynthesis$Main$parseRoute = function (_p10) {
 	return A2(
 		_elm_lang$core$Maybe$withDefault,
 		_dmsnell$photosynthesis$Main$SiteNotFound,
-		A2(_evancz$url_parser$UrlParser$parseHash, _dmsnell$photosynthesis$Main$routeParser, _p9));
+		A2(_evancz$url_parser$UrlParser$parseHash, _dmsnell$photosynthesis$Main$routeParser, _p10));
 };
 var _dmsnell$photosynthesis$Main$update = F2(
 	function (msg, model) {
 		update:
 		while (true) {
-			var _p10 = msg;
-			switch (_p10.ctor) {
+			var _p11 = msg;
+			switch (_p11.ctor) {
 				case 'NetworkError':
 					return {
 						ctor: '_Tuple2',
@@ -11414,10 +11475,10 @@ var _dmsnell$photosynthesis$Main$update = F2(
 						_0: _elm_lang$core$Native_Utils.update(
 							model,
 							{isNetworkActive: true}),
-						_1: A2(_lukewestby$elm_http_builder$HttpBuilder$send, toMsg, _p10._0)
+						_1: A2(_lukewestby$elm_http_builder$HttpBuilder$send, toMsg, _p11._0)
 					};
 				case 'NetworkSuccess':
-					var _v4 = _p10._0,
+					var _v4 = _p11._0,
 						_v5 = _elm_lang$core$Native_Utils.update(
 						model,
 						{isNetworkActive: false});
@@ -11425,12 +11486,12 @@ var _dmsnell$photosynthesis$Main$update = F2(
 					model = _v5;
 					continue update;
 				case 'ReceivePosts':
-					var validPost = function (_p11) {
-						var _p12 = _p11;
+					var validPost = function (_p12) {
+						var _p13 = _p12;
 						var url = function (s) {
 							return A2(_elm_lang$core$String$contains, '?', s) ? A2(_elm_community$string_extra$String_Extra$leftOf, '?', s) : s;
 						}(
-							A2(_elm_lang$core$Maybe$withDefault, '', _p12.imageUrl));
+							A2(_elm_lang$core$Maybe$withDefault, '', _p13.imageUrl));
 						return A2(
 							_elm_lang$core$List$any,
 							A2(_elm_lang$core$Basics$flip, _elm_lang$core$String$endsWith, url),
@@ -11467,10 +11528,10 @@ var _dmsnell$photosynthesis$Main$update = F2(
 								function (post) {
 									return {ctor: '_Tuple2', _0: post.createdAt, _1: post};
 								},
-								A2(_elm_lang$core$List$filter, validPost, _p10._1))));
+								A2(_elm_lang$core$List$filter, validPost, _p11._1))));
 					var newPostList = _elm_lang$core$Native_Utils.update(
 						oldPostList,
-						{posts: newPosts, nextPage: _p10._0});
+						{posts: newPosts, nextPage: _p11._0});
 					return {
 						ctor: '_Tuple2',
 						_0: _elm_lang$core$Native_Utils.update(
@@ -11494,7 +11555,7 @@ var _dmsnell$photosynthesis$Main$update = F2(
 						_0: _elm_lang$core$Native_Utils.update(
 							model,
 							{
-								route: _dmsnell$photosynthesis$Main$parseRoute(_p10._0)
+								route: _dmsnell$photosynthesis$Main$parseRoute(_p11._0)
 							}),
 						_1: _elm_lang$core$Platform_Cmd$none
 					};
@@ -11504,18 +11565,18 @@ var _dmsnell$photosynthesis$Main$update = F2(
 var _dmsnell$photosynthesis$Main$init = function (location) {
 	var route = _dmsnell$photosynthesis$Main$parseRoute(location);
 	var nextPostList = function () {
-		var _p13 = route;
-		if (_p13.ctor === 'Site') {
+		var _p14 = route;
+		if (_p14.ctor === 'Site') {
 			return _elm_lang$core$Native_Utils.update(
 				_dmsnell$photosynthesis$Main$postList,
-				{site: _p13._0});
+				{site: _p14._0});
 		} else {
 			return _dmsnell$photosynthesis$Main$postList;
 		}
 	}();
 	var startFetching = function () {
-		var _p14 = route;
-		if (_p14.ctor === 'Site') {
+		var _p15 = route;
+		if (_p15.ctor === 'Site') {
 			return _elm_lang$core$Maybe$Just(
 				_dmsnell$photosynthesis$Main$fetchPosts(nextPostList));
 		} else {

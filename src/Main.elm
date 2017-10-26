@@ -25,12 +25,49 @@ type Msg
     | UrlChange Location
 
 
+type alias Coords =
+    { latitutde : Float
+    , longitude : Float
+    }
+
+
+type alias Exif =
+    { aperture : Maybe Float
+    , camera : Maybe String
+    , focalLength : Maybe Float
+    , iso : Maybe Int
+    , location : Maybe Coords
+    , shutterSpeed : Maybe Float
+    }
+
+
+type alias Attachment =
+    { id : Int
+    , date : String
+    , caption : String
+    , exif : Maybe Exif
+    , title : String
+    , url : String
+    }
+
+
+emptyAttachment =
+    { id = 0
+    , date = Nothing
+    , caption = Nothing
+    , exif = Nothing
+    , title = Nothing
+    , url = ""
+    }
+
+
 type alias Post =
     { id : Int
     , title : String
     , content : String
     , createdAt : String
     , url : String
+    , attachments : List Attachment
     , imageUrl : Maybe String
     }
 
@@ -201,6 +238,8 @@ update msg model =
                         |> Dict.fromList
                         |> (flip Dict.union) oldPostList.posts
 
+                -- rejects =
+                --     posts |> List.filter (not << validPost) |> Debug.log "Rejects"
                 newPostList =
                     ({ oldPostList
                         | posts = newPosts
@@ -320,19 +359,52 @@ fetchPosts postList =
             JD.keyValuePairs (JD.field "URL" JD.string)
                 |> JD.map (List.head >> Maybe.map Tuple.second)
 
+        exif =
+            let
+                asType cast name =
+                    (JD.maybe <| JD.field name JD.string)
+                        |> (JD.map ((Maybe.map cast) >> (Maybe.andThen Result.toMaybe)))
+            in
+                JD.map6
+                    Exif
+                    (asType String.toFloat "aperture")
+                    (JD.maybe <| JD.field "camera" JD.string)
+                    (asType String.toFloat "focal_length")
+                    (asType String.toInt "iso")
+                    (JD.map2
+                        (Maybe.map2 Coords)
+                        (JD.maybe <| JD.field "latitude" JD.float)
+                        (JD.maybe <| JD.field "longitude" JD.float)
+                    )
+                    (asType String.toFloat "shutter_speed")
+
+        attachment =
+            JD.map6
+                Attachment
+                (JD.field "ID" JD.int)
+                (JD.field "date" JD.string)
+                (JD.field "caption" JD.string)
+                (JD.maybe <| JD.field "exif" exif)
+                (JD.field "title" JD.string)
+                (JD.field "URL" JD.string)
+
         decoder =
             JD.map2
                 ReceivePosts
                 (JD.maybe <| JD.at [ "meta", "next_page" ] JD.string)
                 (JD.field "posts"
                     (JD.list
-                        (JD.map6
+                        (JD.map7
                             Post
                             (JD.field "ID" JD.int)
                             (JD.field "title" JD.string)
                             (JD.field "excerpt" JD.string)
                             (JD.field "date" JD.string)
                             (JD.field "URL" JD.string)
+                            (JD.keyValuePairs attachment
+                                |> JD.map (List.map Tuple.second)
+                                |> JD.field "attachments"
+                            )
                             (JD.field "attachments" attributes)
                         )
                     )
